@@ -137,13 +137,13 @@ mod tests {
 
     use super::*;
 
-    #[test_case("/home/foo/enum.elon.html", SymbolType::Enum)]
-    #[test_case("/home/foo/fn.foo.html", SymbolType::Function)]
-    #[test_case("/home/foo/macro.makrow.html", SymbolType::Macro)]
-    #[test_case("/home/foo/index.html", SymbolType::Unknown)]
-    #[test_case("/home/foo/primative.ug.html", SymbolType::Primative)]
-    #[test_case("/home/foo/struct.structural.html", SymbolType::Struct)]
-    #[test_case("/home/foo/trait.fooable.html", SymbolType::Trait)]
+    #[test_case("test_resources/foo/enum.elon.html", SymbolType::Enum)]
+    #[test_case("test_resources/foo/fn.foo.html", SymbolType::Function)]
+    #[test_case("test_resources/foo/macro.makrow.html", SymbolType::Macro)]
+    #[test_case("test_resources/foo/index.html", SymbolType::Unknown)]
+    #[test_case("test_resources/foo/primative.ug.html", SymbolType::Primative)]
+    #[test_case("test_resources/foo/struct.structural.html", SymbolType::Struct)]
+    #[test_case("test_resources/foo/trait.fooable.html", SymbolType::Trait)]
     fn path_buf_into_symbol_type(path: &str, expected: SymbolType) {
         let path_buf = path::PathBuf::from(path);
         let symbol_type = SymbolType::from(path_buf);
