@@ -133,24 +133,21 @@ fn get_crate_root() -> Option<path::PathBuf> {
 
 #[cfg(test)]
 mod tests {
+    use test_case::test_case;
+
     use super::*;
 
-    #[test]
-    fn path_buf_into_symbol_type() {
-        let enum_path = path::PathBuf::from("/home/foo/enum.elon.html");
-        let function_path = path::PathBuf::from("/home/foo/fn.foo.html");
-        let macro_path = path::PathBuf::from("/home/foo/macro.makrow.html");
-        let other_path = path::PathBuf::from("/home/foo/index.html");
-        let primative_path = path::PathBuf::from("/home/foo/primative.ug.html");
-        let struct_path = path::PathBuf::from("/home/foo/struct.structural.html");
-        let trait_path = path::PathBuf::from("/home/foo/trait.fooable.html");
+    #[test_case("/home/foo/enum.elon.html", SymbolType::Enum)]
+    #[test_case("/home/foo/fn.foo.html", SymbolType::Function)]
+    #[test_case("/home/foo/macro.makrow.html", SymbolType::Macro)]
+    #[test_case("/home/foo/index.html", SymbolType::Unknown)]
+    #[test_case("/home/foo/primative.ug.html", SymbolType::Primative)]
+    #[test_case("/home/foo/struct.structural.html", SymbolType::Struct)]
+    #[test_case("/home/foo/trait.fooable.html", SymbolType::Trait)]
+    fn path_buf_into_symbol_type(path: &str, expected: SymbolType) {
+        let path_buf = path::PathBuf::from(path);
+        let symbol_type = SymbolType::from(path_buf);
 
-        assert_eq!(SymbolType::from(enum_path), SymbolType::Enum);
-        assert_eq!(SymbolType::from(function_path), SymbolType::Function);
-        assert_eq!(SymbolType::from(macro_path), SymbolType::Macro);
-        assert_eq!(SymbolType::from(other_path), SymbolType::Unknown);
-        assert_eq!(SymbolType::from(primative_path), SymbolType::Primative);
-        assert_eq!(SymbolType::from(struct_path), SymbolType::Struct);
-        assert_eq!(SymbolType::from(trait_path), SymbolType::Trait);
+        assert_eq!(symbol_type, expected);
     }
 }
