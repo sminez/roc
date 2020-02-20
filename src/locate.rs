@@ -19,7 +19,7 @@ impl From<path::PathBuf> for SymbolType {
         if path_buf.is_file() {
             match path_buf.file_name() {
                 Some(p) => match p.to_os_string().into_string() {
-                    Err(_) => return SymbolType::Unknown,
+                    Err(_) => SymbolType::Unknown,
                     Ok(s) => match s.split('.').collect::<Vec<&str>>()[0] {
                         "constant" => SymbolType::Constant,
                         "enum" => SymbolType::Enum,
@@ -31,7 +31,7 @@ impl From<path::PathBuf> for SymbolType {
                         _ => SymbolType::Unknown,
                     },
                 },
-                None => return SymbolType::Unknown,
+                None => SymbolType::Unknown,
             }
         } else {
             SymbolType::Module
@@ -50,11 +50,12 @@ impl From<path::PathBuf> for Symbol {
     fn from(path_buf: path::PathBuf) -> Symbol {
         let symbol_type = SymbolType::from(path_buf.clone());
         let name = path_buf.file_name().unwrap().to_os_string();
-        return Symbol {
+
+        Symbol {
             symbol_type,
             path_buf,
             name,
-        };
+        }
     }
 }
 
@@ -79,20 +80,20 @@ impl Locator {
             }
         };
 
-        return Locator {
-            root: root,
-            query: query,
-        };
+        Locator {
+            root,
+            query,
+        }
     }
 
     fn parse_directory(&self, dir: path::PathBuf) -> Vec<SymbolType> {
         // fetch and parse contents, dropping unknowns
         match dir.read_dir() {
-            Err(_) => panic!("unable to read directory"),
             Ok(paths) => paths
                 .filter_map(|p| p.ok())
                 .map(|p| SymbolType::from(p.path()))
                 .collect(),
+            _ => panic!("unable to read directory"),
         }
     }
 }
@@ -106,13 +107,13 @@ fn get_doc_root(is_stdlib: bool) -> Option<path::PathBuf> {
 }
 
 fn get_sys_root() -> Option<path::PathBuf> {
-    return process::Command::new("rustc")
+    process::Command::new("rustc")
         .arg("--print")
         .arg("sysroot")
         .output()
         .ok()
         .and_then(|out| String::from_utf8(out.stdout).ok())
-        .map(|s| path::Path::new(s.trim()).to_path_buf());
+        .map(|s| path::Path::new(s.trim()).to_path_buf())
 }
 
 fn get_crate_root() -> Option<path::PathBuf> {
@@ -133,7 +134,7 @@ fn get_crate_root() -> Option<path::PathBuf> {
         cur_dir.pop();
     }
 
-    return None;
+    None
 }
 
 #[cfg(test)]

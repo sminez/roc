@@ -17,15 +17,15 @@ impl From<String> for Query {
         let components: Vec<String> = s
             .split("::")
             .flat_map(|s| s.split('.'))
-            .filter(|s| s.len() > 0)
-            .map(|s| String::from(s))
+            .filter(|s| !s.is_empty())
+            .map(String::from)
             .collect();
 
-        return Query {
+        Query {
             is_stdlib: components[0] == "std",
-            is_method: s.contains("."),
+            is_method: s.contains('.'),
             components,
-        };
+        }
     }
 }
 
@@ -39,7 +39,7 @@ impl Query {
             buf.pop();
         }
 
-        return buf;
+        buf
     }
 
     fn method(&self) -> Option<String> {
