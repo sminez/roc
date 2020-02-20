@@ -30,5 +30,5 @@ fn main() {
     let query = query::Query::from(opts.query);
     let locator = locate::Locator::new(query);
 
-    println!("{:?}", locator.root);
+    locator.open();
 }

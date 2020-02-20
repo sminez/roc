@@ -9,7 +9,7 @@ pub struct Query {
     /// are we looking for a specific method or an individual symbol
     pub is_method: bool,
     /// the delimited path that we are going to try to parse for locating docs
-    components: Vec<String>,
+    pub components: Vec<String>,
 }
 
 impl From<String> for Query {

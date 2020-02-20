@@ -80,10 +80,23 @@ impl Locator {
             }
         };
 
-        Locator {
-            root,
-            query,
-        }
+        Locator { root, query }
+    }
+
+    pub fn open(&self) -> Result<(), std::io::Error> {
+        let mut path = self.root.clone();
+        path.extend(self.query.components.iter());
+        path.push("index.html");
+
+        let index = path
+            .as_os_str()
+            .to_str()
+            .expect("failed to convert path to string");
+        println!("{}", index);
+
+        process::Command::new("firefox").arg(index).spawn()?;
+
+        Ok(())
     }
 
     fn parse_directory(&self, dir: path::PathBuf) -> Vec<SymbolType> {
@@ -100,7 +113,7 @@ impl Locator {
 
 fn get_doc_root(is_stdlib: bool) -> Option<path::PathBuf> {
     if is_stdlib {
-        get_sys_root().map(|r| r.join(path::Path::new("share/doc/rust/html/std")))
+        get_sys_root().map(|r| r.join(path::Path::new("share/doc/rust/html")))
     } else {
         get_crate_root().map(|r| r.join(path::Path::new("target/doc")))
     }
