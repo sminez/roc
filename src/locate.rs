@@ -92,7 +92,6 @@ impl Locator {
             .as_os_str()
             .to_str()
             .expect("failed to convert path to string");
-        println!("{}", index);
 
         process::Command::new("firefox").arg(index).spawn()?;
 

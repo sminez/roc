@@ -30,5 +30,7 @@ fn main() {
     let query = query::Query::from(opts.query);
     let locator = locate::Locator::new(query);
 
-    locator.open();
+    if opts.open_in_browser {
+        locator.open();
+    }
 }
