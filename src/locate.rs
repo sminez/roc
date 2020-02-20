@@ -133,9 +133,8 @@ fn get_crate_root() -> Option<path::PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use test_case::test_case;
-
     use super::*;
+    use test_case::test_case;
 
     #[test_case("test_resources/foo/enum.elon.html", SymbolType::Enum)]
     #[test_case("test_resources/foo/fn.foo.html", SymbolType::Function)]
