@@ -1,5 +1,6 @@
 use clap::Clap;
 use roc::locate;
+use roc::query;
 
 /// roc -- command lines rust documentation that rocks
 #[derive(Clap, Debug)]
@@ -20,14 +21,14 @@ struct Options {
     #[clap(short = "s", long = "string")]
     grep: Option<String>,
 
-    /// <mod>[::<symbol>[::<method>]]
-    target: String,
+    /// <mod>[::<symbol>[.<method>]]
+    query: String,
 }
 
 fn main() {
     let opts: Options = Options::parse();
-    let locator = locate::Locator::new();
+    let query = query::Query::from(opts.query);
+    let locator = locate::Locator::new(query);
 
-    println!("{:?}", opts);
-    println!("{:?}", locator);
+    println!("{:?}", locator.root);
 }

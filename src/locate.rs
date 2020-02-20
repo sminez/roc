@@ -1,3 +1,4 @@
+use super::query;
 use std::{env, ffi, path, process};
 
 #[derive(PartialEq, Eq, Debug)]
@@ -59,22 +60,32 @@ impl From<path::PathBuf> for Symbol {
 
 #[derive(Debug)]
 pub struct Locator {
-    sys_root: Option<path::PathBuf>,
-    crate_root: Option<path::PathBuf>,
+    pub root: path::PathBuf,
+    query: query::Query,
 }
 
 impl Locator {
-    pub fn new() -> Locator {
-        let sys_root = get_sys_root();
-        let crate_root = get_crate_root();
+    pub fn new(query: query::Query) -> Locator {
+        let root = match get_doc_root(query.is_stdlib) {
+            Some(r) => r,
+            None => {
+                // TODO: these should be user friendly error messages
+                //       that then exit the program rather than panics
+                if query.is_stdlib {
+                    panic!("unable to locate sysroot")
+                } else {
+                    panic!("no cargo generated docs")
+                }
+            }
+        };
 
         return Locator {
-            sys_root,
-            crate_root,
+            root: root,
+            query: query,
         };
     }
 
-    fn parse_directory(dir: path::PathBuf) -> Vec<SymbolType> {
+    fn parse_directory(&self, dir: path::PathBuf) -> Vec<SymbolType> {
         // fetch and parse contents, dropping unknowns
         match dir.read_dir() {
             Err(_) => panic!("unable to read directory"),
@@ -84,20 +95,14 @@ impl Locator {
                 .collect(),
         }
     }
+}
 
-    // Starting directory when looking for std::* documentation
-    // fn std_doc_root(&self) -> Option<path::PathBuf> {
-    //     self.sys_root
-    //         .clone()
-    //         .map(|r| r.join(path::Path::new("share/docs/rust/html/std")))
-    // }
-
-    // Starting directory when looking for !std::* documentation
-    // fn crate_doc_root(&self) -> Option<path::PathBuf> {
-    //     self.crate_root
-    //         .clone()
-    //         .map(|r| r.join(path::Path::new("target/doc")))
-    // }
+fn get_doc_root(is_stdlib: bool) -> Option<path::PathBuf> {
+    if is_stdlib {
+        get_sys_root().map(|r| r.join(path::Path::new("share/docs/rust/html/std")))
+    } else {
+        get_crate_root().map(|r| r.join(path::Path::new("target/doc")))
+    }
 }
 
 fn get_sys_root() -> Option<path::PathBuf> {
