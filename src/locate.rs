@@ -99,7 +99,7 @@ impl Locator {
 
 fn get_doc_root(is_stdlib: bool) -> Option<path::PathBuf> {
     if is_stdlib {
-        get_sys_root().map(|r| r.join(path::Path::new("share/docs/rust/html/std")))
+        get_sys_root().map(|r| r.join(path::Path::new("share/doc/rust/html/std")))
     } else {
         get_crate_root().map(|r| r.join(path::Path::new("target/doc")))
     }
