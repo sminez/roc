@@ -88,12 +88,30 @@ impl Locator {
         path.extend(self.query.components.iter());
         path.push("index.html");
 
-        let index = path
+        if !path.exists() {
+            // get rid of index.html
+            path.pop();
+            // grab the name of what we're searching for
+            let subj = path.iter().last().expect("no subject name found").to_str().expect("couldn't convert name to string").to_string();
+            // get rid of the name
+            path.pop();
+
+            for typ in &["struct", "enum", "trait", "fn", "macro", "type"] {
+                let filename = format!("{}.{}.html", typ, subj);
+                path.push(filename);
+                if path.exists() {
+                    break;
+                }
+                path.pop();
+            }
+        }
+
+        let path_str = path
             .as_os_str()
             .to_str()
             .expect("failed to convert path to string");
 
-        process::Command::new("firefox").arg(index).spawn()?;
+        process::Command::new("firefox").arg(path_str).spawn()?;
 
         Ok(())
     }
