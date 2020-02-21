@@ -1,8 +1,8 @@
 use super::query;
-use std::{env, ffi, path, process};
+use std::{env, ffi, fs, path, process};
 
-#[derive(PartialEq, Eq, Debug)]
-enum SymbolType {
+#[derive(PartialEq, Eq, Debug, Clone)]
+enum Tag {
     Constant,
     Enum,
     Function,
@@ -14,47 +14,63 @@ enum SymbolType {
     Unknown,
 }
 
-impl From<path::PathBuf> for SymbolType {
-    fn from(path_buf: path::PathBuf) -> SymbolType {
-        if path_buf.is_file() {
-            match path_buf.file_name() {
-                Some(p) => match p.to_os_string().into_string() {
-                    Err(_) => SymbolType::Unknown,
-                    Ok(s) => match s.split('.').collect::<Vec<&str>>()[0] {
-                        "constant" => SymbolType::Constant,
-                        "enum" => SymbolType::Enum,
-                        "fn" => SymbolType::Function,
-                        "macro" => SymbolType::Macro,
-                        "primative" => SymbolType::Primative,
-                        "struct" => SymbolType::Struct,
-                        "trait" => SymbolType::Trait,
-                        _ => SymbolType::Unknown,
-                    },
-                },
-                None => SymbolType::Unknown,
-            }
-        } else {
-            SymbolType::Module
+impl From<path::PathBuf> for Tag {
+    fn from(path_buf: path::PathBuf) -> Tag {
+        let file_name = path_buf.file_name().unwrap();
+        if file_name == ffi::OsString::from("index.html") {
+            return Tag::Module;
+        }
+
+        match file_name.to_os_string().into_string() {
+            Err(_) => Tag::Unknown,
+            Ok(s) => match s.split('.').collect::<Vec<&str>>()[0] {
+                "constant" => Tag::Constant,
+                "enum" => Tag::Enum,
+                "fn" => Tag::Function,
+                "macro" => Tag::Macro,
+                "primative" => Tag::Primative,
+                "struct" => Tag::Struct,
+                "trait" => Tag::Trait,
+                _ => Tag::Unknown,
+            },
         }
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
-struct Symbol {
-    symbol_type: SymbolType,
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct TaggedPath {
     path_buf: path::PathBuf,
-    name: ffi::OsString,
+    file_name: String,
+    without_prefix: Option<ffi::OsString>,
+    tag: Tag,
 }
 
-impl From<path::PathBuf> for Symbol {
-    fn from(path_buf: path::PathBuf) -> Symbol {
-        let symbol_type = SymbolType::from(path_buf.clone());
-        let name = path_buf.file_name().unwrap().to_os_string();
+impl TaggedPath {
+    pub fn path(&self) -> String {
+        String::from(self.path_buf.to_str().unwrap())
+    }
+}
 
-        Symbol {
-            symbol_type,
+impl From<path::PathBuf> for TaggedPath {
+    fn from(path_buf: path::PathBuf) -> TaggedPath {
+        // TODO: handle gracefully / determine an OS independent way of doing this
+        let file_name = match path_buf.file_name().unwrap().to_str() {
+            Some(s) => String::from(s),
+            None => panic!("file path is not valid utf8"),
+        };
+        let tag = Tag::from(path_buf.clone());
+        let without_prefix = match tag {
+            Tag::Module | Tag::Unknown => None,
+            _ => Some(ffi::OsString::from(
+                file_name.splitn(2, '.').collect::<Vec<&str>>()[1],
+            )),
+        };
+
+        TaggedPath {
             path_buf,
-            name,
+            file_name,
+            without_prefix,
+            tag,
         }
     }
 }
@@ -80,27 +96,57 @@ impl Locator {
             }
         };
 
-        Locator {
-            root,
-            query,
-        }
+        Locator { root, query }
     }
 
-    fn parse_directory(&self, dir: path::PathBuf) -> Vec<SymbolType> {
-        // fetch and parse contents, dropping unknowns
-        match dir.read_dir() {
-            Ok(paths) => paths
-                .filter_map(|p| p.ok())
-                .map(|p| SymbolType::from(p.path()))
-                .collect(),
-            _ => panic!("unable to read directory"),
+    pub fn determine_target_file_path(&self) -> Option<TaggedPath> {
+        let last_element = self.query.last_as_os_string();
+        let target_filename = ffi::OsString::from(self.query.filename());
+
+        let mut search_path = self.root.clone();
+        search_path.extend(self.query.dir_as_path_buf().iter());
+
+        // Check to see if we are targeting a module and grab index.html
+        // if we are.
+        search_path.push(last_element.clone());
+        if search_path.is_dir() {
+            search_path.push("index.html");
+            return Some(TaggedPath::from(search_path));
+        } else {
+            search_path.pop();
         }
+
+        while search_path != self.root {
+            if let Ok(entries) = search_path.read_dir() {
+                let valid_entries = entries
+                    .filter_map(|p| p.ok())
+                    .collect::<Vec<fs::DirEntry>>();
+
+                for entry in valid_entries {
+                    let tagged = TaggedPath::from(entry.path());
+                    if let Some(without_prefix) = tagged.clone().without_prefix {
+                        if without_prefix == target_filename {
+                            return Some(tagged);
+                        }
+                    }
+                }
+            };
+
+            if let Some(p) = search_path.file_name() {
+                if p == target_filename {
+                    return Some(TaggedPath::from(search_path));
+                }
+            }
+
+            search_path.pop();
+        }
+        return None;
     }
 }
 
 fn get_doc_root(is_stdlib: bool) -> Option<path::PathBuf> {
     if is_stdlib {
-        get_sys_root().map(|r| r.join(path::Path::new("share/doc/rust/html/std")))
+        get_sys_root().map(|r| r.join(path::Path::new("share/doc/rust/html")))
     } else {
         get_crate_root().map(|r| r.join(path::Path::new("target/doc")))
     }
@@ -133,8 +179,7 @@ fn get_crate_root() -> Option<path::PathBuf> {
         };
         cur_dir.pop();
     }
-
-    None
+    return None;
 }
 
 #[cfg(test)]
@@ -142,16 +187,17 @@ mod tests {
     use super::*;
     use test_case::test_case;
 
-    #[test_case("test_resources/foo/enum.elon.html", SymbolType::Enum)]
-    #[test_case("test_resources/foo/fn.foo.html", SymbolType::Function)]
-    #[test_case("test_resources/foo/macro.makrow.html", SymbolType::Macro)]
-    #[test_case("test_resources/foo/index.html", SymbolType::Unknown)]
-    #[test_case("test_resources/foo/primative.ug.html", SymbolType::Primative)]
-    #[test_case("test_resources/foo/struct.structural.html", SymbolType::Struct)]
-    #[test_case("test_resources/foo/trait.fooable.html", SymbolType::Trait)]
-    fn path_buf_into_symbol_type(path: &str, expected: SymbolType) {
+    #[test_case("test_resources/foo/enum.elon.html", Tag::Enum)]
+    #[test_case("test_resources/foo/fn.foo.html", Tag::Function)]
+    #[test_case("test_resources/foo/macro.makrow.html", Tag::Macro)]
+    #[test_case("test_resources/foo/index.html", Tag::Module)]
+    #[test_case("test_resources/foo/primative.ug.html", Tag::Primative)]
+    #[test_case("test_resources/foo/struct.structural.html", Tag::Struct)]
+    #[test_case("test_resources/foo/trait.fooable.html", Tag::Trait)]
+    #[test_case("test_resources/foo/some_other_unknown.html", Tag::Unknown)]
+    fn path_buf_into_symbol_type(path: &str, expected: Tag) {
         let path_buf = path::PathBuf::from(path);
-        let symbol_type = SymbolType::from(path_buf);
+        let symbol_type = Tag::from(path_buf);
 
         assert_eq!(symbol_type, expected);
     }

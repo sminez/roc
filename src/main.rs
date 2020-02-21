@@ -1,6 +1,7 @@
 use clap::Clap;
 use roc::locate;
 use roc::query;
+use std::process;
 
 /// roc -- command lines rust documentation that rocks
 #[derive(Clap, Debug)]
@@ -29,6 +30,21 @@ fn main() {
     let opts: Options = Options::parse();
     let query = query::Query::from(opts.query);
     let locator = locate::Locator::new(query);
+    let tagged_path = match locator.determine_target_file_path() {
+        Some(p) => p,
+        None => {
+            println!("unable to resolve query path");
+            process::exit(1);
+        }
+    };
 
-    println!("{:?}", locator.root);
+    if opts.open_in_browser {
+        process::Command::new("firefox")
+            .arg(tagged_path.path())
+            .spawn()
+            .expect("failed to spwan firefox");
+    } else {
+        // TODO: parse out content from the target file and print
+        println!("{}", tagged_path.path());
+    }
 }

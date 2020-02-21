@@ -1,4 +1,4 @@
-use std::path;
+use std::{ffi, path};
 
 /// Our parsed input from the command line
 #[derive(PartialEq, Eq, Debug)]
@@ -9,7 +9,7 @@ pub struct Query {
     /// are we looking for a specific method or an individual symbol
     pub is_method: bool,
     /// the delimited path that we are going to try to parse for locating docs
-    components: Vec<String>,
+    pub components: Vec<String>,
 }
 
 impl From<String> for Query {
@@ -30,27 +30,27 @@ impl From<String> for Query {
 }
 
 impl Query {
-    fn path_buf(&self) -> path::PathBuf {
+    pub fn dir_as_path_buf(&self) -> path::PathBuf {
         let mut buf = path::PathBuf::new();
-        for comp in &self.components {
-            buf.push(comp.clone());
-        }
-        if self.is_method {
-            buf.pop();
-        }
+        buf.extend(self.components.iter());
+        buf.pop();
 
-        buf
+        return buf;
     }
 
-    fn method(&self) -> Option<String> {
-        if self.is_method {
-            if let Some(s) = self.components.last() {
-                Some(String::from(s))
-            } else {
-                panic!("no last component in method query")
-            }
+    pub fn filename(&self) -> String {
+        if let Some(s) = self.components.last() {
+            String::from(s) + ".html"
         } else {
-            None
+            panic!("no last component in method query")
+        }
+    }
+
+    pub fn last_as_os_string(&self) -> ffi::OsString {
+        if let Some(s) = self.components.last() {
+            ffi::OsString::from(s)
+        } else {
+            panic!("no last component in method query")
         }
     }
 }
