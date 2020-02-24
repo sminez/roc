@@ -37,7 +37,7 @@ impl From<path::PathBuf> for Tag {
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
-pub struct TaggedPath {
+struct TaggedPath {
     path_buf: path::PathBuf,
     file_name: String,
     without_prefix: Option<ffi::OsString>,
@@ -77,7 +77,7 @@ impl From<path::PathBuf> for TaggedPath {
 /// not the query resolves to something that is from the standard library or a
 /// third party crate that the user is pulling in via Cargo.
 #[derive(PartialEq, Eq, Debug)]
-pub enum CrateType {
+enum CrateType {
     StdLib,
     Cargo,
 }
@@ -86,10 +86,10 @@ pub enum CrateType {
 /// if the query is for a method or a concrete symbol that will have its own
 /// documentation file
 #[derive(PartialEq, Eq, Debug)]
-pub enum QueryType {
+enum QueryType {
     StaticMethod,
     InstanceMethod,
-    ConcreteSymbol,
+    ConcreteSymbol, // TODO: This needs a better name. Essentially this is "a file"
     Unknown,
 }
 
@@ -136,7 +136,11 @@ impl Locator {
         };
     }
 
-    pub fn determine_target_file_path(&self) -> Option<TaggedPath> {
+    pub fn target_file_path(&self) -> Option<String> {
+        self.determine_tagged_path().map(|p| p.path())
+    }
+
+    fn determine_tagged_path(&self) -> Option<TaggedPath> {
         let mut search_path = self.root.clone();
         search_path.extend(self.query_dir_as_path_buf().iter());
 
