@@ -1,6 +1,5 @@
 use clap::Clap;
 use roc::locate;
-use roc::query;
 use std::process;
 
 /// roc -- command lines rust documentation that rocks
@@ -28,8 +27,7 @@ struct Options {
 
 fn main() {
     let opts: Options = Options::parse();
-    let query = query::Query::from(opts.query);
-    let locator = locate::Locator::new(query);
+    let locator = locate::Locator::new(opts.query);
     let tagged_path = match locator.determine_target_file_path() {
         Some(p) => p,
         None => {
