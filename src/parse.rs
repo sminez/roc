@@ -32,6 +32,11 @@ impl DocParser {
         let mut sections: Vec<String> = vec![];
 
         match self.tag {
+            locate::Tag::Module => {
+                sections.push(self.extract_summary());
+                sections.push(self.extract_structs());
+                sections.push(self.extract_functions());
+            }
             locate::Tag::Struct => {
                 sections.push(self.extract_type_declaration());
                 sections.push(self.extract_summary());
@@ -109,8 +114,42 @@ impl DocParser {
         return sections.join("\n\n");
     }
 
-    // fn extract_structs(&self) -> String {}
-    // fn extract_functions(&self) -> String {}
+    fn table_after_header(&self, header_name: &str) -> Option<String> {
+        Some(
+            self.contents
+                .find(And(Class("section-header"), |n: &Node| {
+                    n.attr("id").map_or(false, |i| i == header_name)
+                }))
+                .next()? // the header itself
+                .next()? // a newline...
+                .next()? // the table
+                .first_child()? // tbody
+                .children()
+                .map(|n| {
+                    n.children()
+                        .map(|c| c.text())
+                        .collect::<Vec<String>>()
+                        .join("\n  ")
+                })
+                .collect::<Vec<String>>()
+                .join("\n"),
+        )
+    }
+
+    fn extract_structs(&self) -> String {
+        format!(
+            "Structs\n-------\n{}",
+            self.table_after_header("structs").unwrap()
+        )
+    }
+
+    fn extract_functions(&self) -> String {
+        format!(
+            "Functions\n---------\n{}",
+            self.table_after_header("functions").unwrap()
+        )
+    }
+
     // fn extract_traits(&self) -> String {}
     // fn extract_macros(&self) -> String {}
     // fn extract_enums(&self) -> String {}
