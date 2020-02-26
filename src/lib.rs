@@ -1,2 +1,2 @@
 pub mod locate;
-pub mod query;
+pub mod parse;
