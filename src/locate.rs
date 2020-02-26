@@ -1,7 +1,7 @@
 use std::{env, ffi, path, process};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
-enum Tag {
+pub enum Tag {
     Constant,
     Enum,
     Function,
@@ -37,11 +37,11 @@ impl From<path::PathBuf> for Tag {
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
-struct TaggedPath {
+pub struct TaggedPath {
     path_buf: path::PathBuf,
-    file_name: String,
     without_prefix: Option<ffi::OsString>,
-    tag: Tag,
+    pub file_name: String,
+    pub tag: Tag,
 }
 
 impl TaggedPath {
@@ -140,7 +140,7 @@ impl Locator {
         self.determine_tagged_path().map(|p| p.path())
     }
 
-    fn determine_tagged_path(&self) -> Option<TaggedPath> {
+    pub fn determine_tagged_path(&self) -> Option<TaggedPath> {
         let mut search_path = self.root.clone();
         search_path.extend(self.query_dir_as_path_buf().iter());
 
