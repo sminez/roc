@@ -1,24 +1,31 @@
 extern crate select;
 use crate::locate;
 use select::document::Document;
-use select::predicate::{Class, Name};
+use select::node::Node;
+use select::predicate::{And, Class, Name, Not};
 use std::fs;
 
 pub struct DocParser {
     contents: Document,
     tag: locate::Tag,
+    method_name: Option<String>,
 }
 
 impl DocParser {
     pub fn new(tagged_path: locate::TaggedPath) -> Self {
         let file_name = tagged_path.file_name.clone();
         let tag = tagged_path.tag.clone();
+        let method_name = tagged_path.method_name.clone();
         let file = fs::File::open(tagged_path.path())
             .expect(&format!("unable to open file: {}", file_name));
         let contents =
             Document::from_read(file).expect(&format!("unable to parse HTML file: {}", file_name));
 
-        return DocParser { contents, tag };
+        return DocParser {
+            contents,
+            tag,
+            method_name,
+        };
     }
 
     pub fn parse(&self) -> String {
@@ -30,6 +37,7 @@ impl DocParser {
                 sections.push(self.extract_summary());
                 sections.push(self.extract_method_signatures());
             }
+            locate::Tag::Method => sections.push(self.extract_method()),
             _ => sections.push(self.extract_summary()),
         }
 
@@ -39,8 +47,7 @@ impl DocParser {
     fn extract_summary(&self) -> String {
         let docblock = self
             .contents
-            .find(Class("docblock"))
-            .filter(|n| !n.is(Class("type-decl")))
+            .find(And(Class("docblock"), Not(Class("type-decl"))))
             .next()
             .unwrap();
 
@@ -78,6 +85,28 @@ impl DocParser {
         }
 
         return methods.join("\n");
+    }
+
+    fn extract_method(&self) -> String {
+        let mut sections: Vec<String> = vec![];
+        let id = format!("method.{}", self.method_name.clone().unwrap());
+        let node = self
+            .contents
+            .find(|n: &Node| n.attr("id").map_or(false, |i| i == id))
+            .next()
+            .unwrap();
+
+        sections.push(node.text());
+
+        if let Some(n) = node.next() {
+            if n.is(Class("docblock")) {
+                // TODO: the raw formatting here isn't great as it becomes one big blob
+                //       probably want to try our own iteration over the children?
+                sections.push(n.text());
+            }
+        }
+
+        return sections.join("\n\n");
     }
 
     // fn extract_structs(&self) -> String {}

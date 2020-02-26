@@ -10,6 +10,7 @@ pub enum Tag {
     Primative,
     Struct,
     Trait,
+    Method,
     Unknown,
 }
 
@@ -41,6 +42,7 @@ pub struct TaggedPath {
     path_buf: path::PathBuf,
     without_prefix: Option<ffi::OsString>,
     pub file_name: String,
+    pub method_name: Option<String>,
     pub tag: Tag,
 }
 
@@ -57,6 +59,7 @@ impl From<path::PathBuf> for TaggedPath {
             None => panic!("file path is not valid utf8"),
         };
         let tag = Tag::from(path_buf.clone());
+        let method_name = None;
         let without_prefix = match tag {
             Tag::Module | Tag::Unknown => None,
             _ => Some(ffi::OsString::from(
@@ -68,6 +71,7 @@ impl From<path::PathBuf> for TaggedPath {
             path_buf,
             file_name,
             without_prefix,
+            method_name,
             tag,
         }
     }
@@ -87,9 +91,7 @@ enum CrateType {
 /// documentation file
 #[derive(PartialEq, Eq, Debug)]
 enum QueryType {
-    StaticMethod,
     InstanceMethod,
-    ConcreteSymbol, // TODO: This needs a better name. Essentially this is "a file"
     Unknown,
 }
 
@@ -155,14 +157,24 @@ impl Locator {
         }
 
         let target_filename = self.query_filename();
+        let target_filename_for_method = self.query_filename_for_method();
 
         while search_path != self.root {
             if let Ok(entries) = search_path.read_dir() {
                 for entry in entries.filter_map(|p| p.ok()) {
-                    let tagged = TaggedPath::from(entry.path());
+                    let mut tagged = TaggedPath::from(entry.path());
                     if let Some(without_prefix) = &tagged.without_prefix {
                         if without_prefix == &target_filename {
                             return Some(tagged);
+                        }
+
+                        if let Some(ref target) = target_filename_for_method {
+                            if without_prefix == target {
+                                tagged.tag = Tag::Method;
+                                tagged.method_name =
+                                    Some(String::from(self.last_component().to_str().unwrap()));
+                                return Some(tagged);
+                            }
                         }
                     }
                 }
@@ -170,6 +182,7 @@ impl Locator {
 
             if let Some(p) = search_path.file_name() {
                 if p == target_filename {
+                    search_path.push("index.html");
                     return Some(TaggedPath::from(search_path));
                 }
             }
@@ -185,6 +198,15 @@ impl Locator {
         buf.pop();
 
         return buf;
+    }
+
+    fn query_filename_for_method(&self) -> Option<ffi::OsString> {
+        if self.components.len() > 2 {
+            let comp = self.components[self.components.len() - 2].clone();
+            Some(ffi::OsString::from(comp + ".html"))
+        } else {
+            None
+        }
     }
 
     fn query_filename(&self) -> ffi::OsString {
