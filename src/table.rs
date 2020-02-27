@@ -2,11 +2,10 @@
 //! Cells are left justified and trailing whitespace is stripped from the input.
 use std::cmp;
 
-// TODO: change Row.formatted to something like Row.padded that pads each of the
-//       cells but retains the data as a Vec. Table.as_string can then wrap each
-//       cell to multiple lines if needed to prevent large inputs getting out of
-//       hand and wrecking the terminal formatting...
-// const MAX_WIDTH: usize = 80;
+/// Maximum output width when pretty printing
+const MAX_WIDTH: usize = 90;
+/// Space between columns when pretty printing
+const SPACER: &'static str = "  ";
 
 struct Row {
     cells: Vec<String>,
@@ -19,13 +18,44 @@ pub struct Table {
 }
 
 impl Row {
-    fn formatted(&self, column_widths: Vec<usize>) -> String {
+    fn formatted(&self, column_widths: &Vec<usize>) -> String {
         self.cells
             .iter()
             .zip(column_widths)
             .map(|e| format!("{:01$}", e.0, e.1))
             .collect::<Vec<String>>()
-            .join("  ")
+            .join(SPACER)
+    }
+
+    fn two_column_wrapped(&self, column_widths: &Vec<usize>) -> String {
+        if self.cells.len() != 2 {
+            panic!(
+                "two_column_wrapped called on row with {} columns",
+                self.cells.len()
+            );
+        }
+
+        if column_widths.iter().sum::<usize>() + SPACER.len() <= MAX_WIDTH {
+            return self.formatted(&column_widths);
+        }
+
+        let mut buf = String::new();
+        let mut current = String::new();
+        let offset = vec![" "; column_widths[0] + SPACER.len() + 1].join("");
+        current.push_str(&(format!("{:01$}", self.cells[0], column_widths[0]) + SPACER));
+
+        for word in self.cells[1].split_whitespace() {
+            if current.len() + word.len() + 1 < MAX_WIDTH {
+                current.push_str(&format!(" {}", word));
+            } else {
+                buf.push_str(&format!("{}\n", current));
+                current.clear();
+                current.push_str(&format!("{}{}", offset, word));
+            }
+        }
+
+        buf.push_str(&current);
+        return buf;
     }
 }
 
@@ -66,7 +96,7 @@ impl Table {
     pub fn as_string(&self) -> String {
         self.rows
             .iter()
-            .map(|r| r.formatted(self.column_widths.clone()))
+            .map(|r| r.two_column_wrapped(&self.column_widths))
             .collect::<Vec<String>>()
             .join("\n")
     }
