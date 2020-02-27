@@ -1,5 +1,5 @@
 extern crate select;
-use crate::locate;
+use crate::{locate, table};
 use select::document::Document;
 use select::node::Node;
 use select::predicate::{And, Class, Name, Not};
@@ -33,28 +33,53 @@ impl DocParser {
 
         match self.tag {
             locate::Tag::Module => {
-                sections.push(self.extract_summary());
-                sections.push(self.extract_structs());
-                sections.push(self.extract_functions());
+                if let Some(s) = self.extract_summary() {
+                    sections.push(s)
+                };
+                if let Some(s) = self.extract_traits() {
+                    sections.push(s)
+                };
+                if let Some(s) = self.extract_constants() {
+                    sections.push(s)
+                };
+                if let Some(s) = self.extract_structs() {
+                    sections.push(s)
+                };
+                if let Some(s) = self.extract_enums() {
+                    sections.push(s)
+                };
+                if let Some(s) = self.extract_functions() {
+                    sections.push(s)
+                };
+                if let Some(s) = self.extract_macros() {
+                    sections.push(s)
+                };
             }
+
             locate::Tag::Struct => {
                 sections.push(self.extract_type_declaration());
-                sections.push(self.extract_summary());
+                if let Some(s) = self.extract_summary() {
+                    sections.push(s)
+                }
                 sections.push(self.extract_method_signatures());
             }
+
             locate::Tag::Method => sections.push(self.extract_method()),
-            _ => sections.push(self.extract_summary()),
+            _ => {
+                if let Some(s) = self.extract_summary() {
+                    sections.push(s)
+                }
+            }
         }
 
         return sections.join("\n\n");
     }
 
-    fn extract_summary(&self) -> String {
+    fn extract_summary(&self) -> Option<String> {
         let docblock = self
             .contents
             .find(And(Class("docblock"), Not(Class("type-decl"))))
-            .next()
-            .unwrap();
+            .next()?;
 
         let mut paragraphs: Vec<String> = vec![];
         for node in docblock.children() {
@@ -66,9 +91,10 @@ impl DocParser {
                 break;
             }
         }
-        return paragraphs.join("\n\n") + "\n";
+        return Some(paragraphs.join("\n\n") + "\n");
     }
 
+    // Not Option-al as all structs must have a type declaration
     fn extract_type_declaration(&self) -> String {
         self.contents
             .find(Class("type-decl"))
@@ -114,45 +140,63 @@ impl DocParser {
         return sections.join("\n\n");
     }
 
-    fn table_after_header(&self, header_name: &str) -> Option<String> {
+    fn table_after_header(&self, header: &str) -> Option<String> {
         Some(
-            self.contents
-                .find(And(Class("section-header"), |n: &Node| {
-                    n.attr("id").map_or(false, |i| i == header_name)
-                }))
-                .next()? // the header itself
-                .next()? // a newline...
-                .next()? // the table
-                .first_child()? // tbody
-                .children()
-                .map(|n| {
-                    n.children()
-                        .map(|c| c.text())
-                        .collect::<Vec<String>>()
-                        .join("  ")
-                })
-                .collect::<Vec<String>>()
-                .join(""),
+            table::Table::from_rows(
+                self.contents
+                    .find(And(Class("section-header"), |n: &Node| {
+                        n.attr("id").map_or(false, |i| i == header)
+                    }))
+                    .next()? // the header itself
+                    .next()? // a newline...
+                    .next()? // the table
+                    .first_child()? // tbody
+                    .children()
+                    .map(|n| {
+                        n.children()
+                            .map(|c| String::from(c.text().replace("\n", " ").trim_end()))
+                            .collect::<Vec<String>>()
+                    })
+                    .collect::<Vec<Vec<String>>>(),
+            )
+            .as_string(),
         )
     }
 
-    fn extract_structs(&self) -> String {
-        format!(
-            "Structs\n-------\n{}",
-            self.table_after_header("structs").unwrap()
-        )
+    fn table_with_header(&self, header: &str) -> Option<String> {
+        self.table_after_header(header).map(|t| {
+            format!(
+                "{}\n{}\n{}",
+                header.to_uppercase(),
+                vec!["-"; header.len()].join(""),
+                t
+            )
+        })
     }
 
-    fn extract_functions(&self) -> String {
-        format!(
-            "Functions\n---------\n{}",
-            self.table_after_header("functions").unwrap()
-        )
+    fn extract_structs(&self) -> Option<String> {
+        self.table_with_header("structs")
     }
 
-    // fn extract_traits(&self) -> String {}
-    // fn extract_macros(&self) -> String {}
-    // fn extract_enums(&self) -> String {}
-    // fn extract_constants(&self) -> String {}
+    fn extract_functions(&self) -> Option<String> {
+        self.table_with_header("functions")
+    }
+
+    fn extract_traits(&self) -> Option<String> {
+        self.table_with_header("traits")
+    }
+
+    fn extract_macros(&self) -> Option<String> {
+        self.table_with_header("macros")
+    }
+
+    fn extract_enums(&self) -> Option<String> {
+        self.table_with_header("enums")
+    }
+
+    fn extract_constants(&self) -> Option<String> {
+        self.table_with_header("constants")
+    }
+
     // fn extract_modules(&self) -> String {}
 }

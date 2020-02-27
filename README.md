@@ -9,9 +9,9 @@ roc -- cli rust documentation that rocks
 
 ### usage
 ```bash
-$ roc std::fs             # show summary details for the std::fs module
-$ roc std::fs::File       # show fields, methods and impls for fs::File
-$ roc std::fs::File open  # show signature and summary for File::open()
+$ roc std::fs              # show summary details for the std::fs module
+$ roc std::fs::File        # show fields, methods and impls for fs::File
+$ roc std::fs::File::open  # show signature and summary for File::open()
 ```
 
 
@@ -28,8 +28,10 @@ Probably want ways to hunt through known impls and Traits etc?
 
 
 ### doc locations
-`std::*` -> `$(rustc --print sysroot)/share/doc/rust/html/std`
-`*`      -> `$(dirname Cargo.toml)/target/doc`
+```
+std::* -> $(rustc --print sysroot)/share/doc/rust/html/std
+*      -> $(dirname Cargo.toml)/target/doc
+```
 
 We should be able to grab sysroot fairly simply and then grab the docs from
 there for stdlib stuff and this _might_ also mean that we're not tied to the
