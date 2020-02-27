@@ -66,7 +66,7 @@ impl DocParser {
                 break;
             }
         }
-        return paragraphs.join("\n\n");
+        return paragraphs.join("\n\n") + "\n";
     }
 
     fn extract_type_declaration(&self) -> String {
@@ -129,10 +129,10 @@ impl DocParser {
                     n.children()
                         .map(|c| c.text())
                         .collect::<Vec<String>>()
-                        .join("\n  ")
+                        .join("  ")
                 })
                 .collect::<Vec<String>>()
-                .join("\n"),
+                .join(""),
         )
     }
 
