@@ -38,7 +38,7 @@ fn main() {
     };
 
     if opts.open_in_browser {
-        process::Command::new("firefox")
+        process::Command::new("open")
             .arg(tagged_path.path())
             .spawn()
             .expect("failed to spwan firefox");
