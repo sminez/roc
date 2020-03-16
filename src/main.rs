@@ -38,10 +38,20 @@ fn main() {
     };
 
     if opts.open_in_browser {
-        process::Command::new("firefox")
+        let res = process::Command::new("xdg-open")
             .arg(tagged_path.path())
-            .spawn()
-            .expect("failed to spwan firefox");
+            .spawn();
+        if let Err(e) = res {
+            match e.kind() {
+                std::io::ErrorKind::NotFound => {
+                    process::Command::new("open")
+                        .arg(tagged_path.path())
+                        .spawn()
+                        .expect("failed to open using the 'open' command");
+                }
+                _ => panic!("failed to open using the 'xdg-open' command"),
+            }
+        }
     } else {
         let parser = parse::DocParser::new(tagged_path);
         println!("{}", parser.parse());
