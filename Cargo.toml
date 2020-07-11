@@ -8,7 +8,7 @@ authors = [
 edition = "2018"
 
 [dependencies]
-clap = { git = "https://github.com/clap-rs/clap/" }
+clap = "3.0.0-beta.1"
 select = "0.4.3"
 
 [dev-dependencies]

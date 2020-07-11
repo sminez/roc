@@ -1,5 +1,6 @@
 roc -- cli rust documentation that rocks
 ----------------------------------------
+[![Build](https://github.com/sminez/roc/workflows/Build/badge.svg?branch=master)](https://github.com/sminez/roc/actions?query=workflow%3ABuild)
 
 ### caveats
 * assumes that you are using rustup and that you have stdlib docs downloaded
