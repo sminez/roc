@@ -7,10 +7,17 @@ roc -- cli rust documentation that rocks
 
 ### usage
 ```bash
-# generate the documentation
+# show summary comment for the Eq trait from stdlib
+$ roc std::cmp::Eq
+Trait for equality comparisons which are equivalence relations.
+
+This means, that in addition to a == b and a != b being strict inverses, the equality must
+be (for all a, b and c)
+
+# generate the documentation for roc itself
 $ cd roc && cargo doc
 
-# show top level summary details for the roc crate itself
+# show top level summary details for the roc crate
 $ roc roc
 roc - command line doucmentation that rocks
 
@@ -28,7 +35,7 @@ table    A very simple pretty printing table implementation that does not permit
 
 
 # show specific information about the Locator struct
-$ roc roc::locate::Locator                                                           master ~5
+$ roc roc::locate::Locator
 pub struct Locator { /* fields omitted */ }
 
 A Locator handles mapping a user query string from the command line to a file
