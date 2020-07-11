@@ -7,7 +7,7 @@ authors = [
 ]
 license-file = "LICENSE"
 repository = "https://github.com/sminez/roc"
-documentation = "https://docs.rs/roc"
+documentation = "https://docs.rs/rocdoc"
 readme = "README.md"
 edition = "2018"
 description = """
