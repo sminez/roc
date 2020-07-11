@@ -10,9 +10,12 @@ use select::predicate::{And, Class, Name, Not};
 use std::fs;
 
 fn header(s: &str) -> String {
-    format!("{}\n{}", s.to_uppercase(), vec!["-"; s.len()].join(""),)
+    format!("{}\n{}", s, vec!["-"; s.len()].join(""),)
 }
 
+/**
+ * Parses generated HTML output from rustdoc to give summarised results.
+ */
 pub struct DocParser {
     contents: Document,
     tag: locate::Tag,
@@ -20,6 +23,7 @@ pub struct DocParser {
 }
 
 impl DocParser {
+    /// Create a new DocParser rooted at the given tagged search path
     pub fn new(tagged_path: locate::TaggedPath) -> Self {
         let file_name = tagged_path.file_name.clone();
         let file = fs::File::open(tagged_path.path())
@@ -36,7 +40,19 @@ impl DocParser {
         };
     }
 
-    pub fn parse(&self) -> String {
+    /// Instead of parsing the contents of the search result, show child modules instead
+    pub fn show_child_modules(&self) {
+        let s = if let Some(ms) = self.extract_modules() {
+            ms
+        } else {
+            "No child modules found".into()
+        };
+
+        println!("{}", s);
+    }
+
+    /// Parse the contents of a located doc file and pretty print them to the terminal
+    pub fn parse_and_print(&self) {
         let mut sections: Vec<String> = vec![];
 
         match self.tag {
@@ -93,7 +109,8 @@ impl DocParser {
         // TODO: Current parsing leaves '[src]' at the end of a lot of lines
         //       This is a quick hack to tidy that up but we should do this in
         //       a smarter way really...
-        return sections.join("\n\n").replace("[src]", "");
+        sections.retain(|s| s.len() > 0);
+        println!("{}", sections.join("\n\n").replace("[src]", ""));
     }
 
     fn extract_summary(&self) -> Option<String> {
@@ -112,7 +129,7 @@ impl DocParser {
                 break;
             }
         }
-        return Some(paragraphs.join("\n\n") + "\n");
+        return Some(paragraphs.join("\n\n"));
     }
 
     // Not Option-al as all structs must have a type declaration
