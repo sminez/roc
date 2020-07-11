@@ -5,7 +5,14 @@ authors = [
     "sminez <innes.andersonmorrison@gmail.com>",
     "mchlrhw <4028654+mchlrhw@users.noreply.github.com>"
 ]
+license-file = "LICENSE"
+repository = "https://github.com/sminez/roc"
+documentation = "https://docs.rs/roc"
+readme = "README.md"
 edition = "2018"
+description = """
+Command line rust documentation searching in the style of godoc
+"""
 
 [dependencies]
 clap = "3.0.0-beta.1"
