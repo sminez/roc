@@ -1,9 +1,17 @@
+/*!
+ * Parse the contents of rustdoc generated HTML files
+ */
 extern crate select;
+
 use crate::{locate, table};
 use select::document::Document;
 use select::node::Node;
 use select::predicate::{And, Class, Name, Not};
 use std::fs;
+
+fn header(s: &str) -> String {
+    format!("{}\n{}", s.to_uppercase(), vec!["-"; s.len()].join(""),)
+}
 
 pub struct DocParser {
     contents: Document,
@@ -14,17 +22,17 @@ pub struct DocParser {
 impl DocParser {
     pub fn new(tagged_path: locate::TaggedPath) -> Self {
         let file_name = tagged_path.file_name.clone();
-        let tag = tagged_path.tag.clone();
-        let method_name = tagged_path.method_name.clone();
         let file = fs::File::open(tagged_path.path())
             .expect(&format!("unable to open file: {}", file_name));
-        let contents =
-            Document::from_read(file).expect(&format!("unable to parse HTML file: {}", file_name));
+        let contents = Document::from_read(file).expect(&format!(
+            "unable to parse rustdoc generated HTML file: {}",
+            file_name
+        ));
 
         return DocParser {
             contents,
-            tag,
-            method_name,
+            tag: tagged_path.tag.clone(),
+            method_name: tagged_path.method_name.clone(),
         };
     }
 
@@ -34,6 +42,9 @@ impl DocParser {
         match self.tag {
             locate::Tag::Module => {
                 if let Some(s) = self.extract_summary() {
+                    sections.push(s)
+                };
+                if let Some(s) = self.extract_modules() {
                     sections.push(s)
                 };
                 if let Some(s) = self.extract_traits() {
@@ -64,7 +75,14 @@ impl DocParser {
                 sections.push(self.extract_method_signatures());
             }
 
-            locate::Tag::Method => sections.push(self.extract_method()),
+            locate::Tag::Method => {
+                let s = match self.extract_method() {
+                    Some(s) => s,
+                    None => format!("{} is not method", self.method_name.clone().unwrap()),
+                };
+                sections.push(s)
+            }
+
             _ => {
                 if let Some(s) = self.extract_summary() {
                     sections.push(s)
@@ -72,7 +90,10 @@ impl DocParser {
             }
         }
 
-        return sections.join("\n\n");
+        // TODO: Current parsing leaves '[src]' at the end of a lot of lines
+        //       This is a quick hack to tidy that up but we should do this in
+        //       a smarter way really...
+        return sections.join("\n\n").replace("[src]", "");
     }
 
     fn extract_summary(&self) -> Option<String> {
@@ -118,14 +139,13 @@ impl DocParser {
         return methods.join("\n");
     }
 
-    fn extract_method(&self) -> String {
+    fn extract_method(&self) -> Option<String> {
         let mut sections: Vec<String> = vec![];
-        let id = format!("method.{}", self.method_name.clone().unwrap());
+        let id = format!("method.{}", self.method_name.clone()?);
         let node = self
             .contents
             .find(|n: &Node| n.attr("id").map_or(false, |i| i == id))
-            .next()
-            .unwrap();
+            .next()?;
 
         sections.push(node.text());
 
@@ -137,7 +157,7 @@ impl DocParser {
             }
         }
 
-        return sections.join("\n\n");
+        return Some(sections.join("\n\n"));
     }
 
     fn table_after_header(&self, header: &str) -> Option<String> {
@@ -163,15 +183,9 @@ impl DocParser {
         )
     }
 
-    fn table_with_header(&self, header: &str) -> Option<String> {
-        self.table_after_header(header).map(|t| {
-            format!(
-                "{}\n{}\n{}",
-                header.to_uppercase(),
-                vec!["-"; header.len()].join(""),
-                t
-            )
-        })
+    fn table_with_header(&self, header_str: &str) -> Option<String> {
+        self.table_after_header(header_str)
+            .map(|t| format!("{}\n{}", header(header_str), t))
     }
 
     fn extract_structs(&self) -> Option<String> {
@@ -198,5 +212,7 @@ impl DocParser {
         self.table_with_header("constants")
     }
 
-    // fn extract_modules(&self) -> String {}
+    fn extract_modules(&self) -> Option<String> {
+        self.table_with_header("modules")
+    }
 }

@@ -1,7 +1,10 @@
 [package]
 name = "roc"
-version = "0.1.0"
-authors = ["IDAM <innes.andersonmorrison@gmail.com>"]
+version = "0.1.1"
+authors = [
+    "sminez <innes.andersonmorrison@gmail.com>",
+    "mchlrhw <4028654+mchlrhw@users.noreply.github.com>"
+]
 edition = "2018"
 
 [dependencies]

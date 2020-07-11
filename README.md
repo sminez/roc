@@ -67,6 +67,6 @@ ourselves and find the doc output in.
 
 
 -- list --
-- use the filesystemt to grab all top level modules in `std` and the local
+- use the filesystem to grab all top level modules in `std` and the local
   `target/doc` if there is one.
 - pretty print out the results (calling out parent crate in each case)

@@ -54,6 +54,6 @@ fn main() {
         }
     } else {
         let parser = parse::DocParser::new(tagged_path);
-        println!("{}", parser.parse());
+        println!("\n{}", parser.parse());
     }
 }

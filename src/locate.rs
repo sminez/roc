@@ -1,3 +1,7 @@
+/*!
+ * Locate the generated docs that we have available within the current workspace
+ */
+use std::fs;
 use std::{env, ffi, path, process};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -47,8 +51,29 @@ pub struct TaggedPath {
 }
 
 impl TaggedPath {
+    /// The underlying abs path as a String
     pub fn path(&self) -> String {
         String::from(self.path_buf.to_str().unwrap())
+    }
+
+    fn dir(&self) -> String {
+        let mut dir = self.path_buf.clone();
+        dir.pop();
+        String::from(dir.to_str().unwrap())
+    }
+
+    /// Returns a vec of child directory leaf names next to this path
+    pub fn sibling_dirs(&self) -> std::io::Result<Vec<String>> {
+        let mut dirs = Vec::new();
+        for res in fs::read_dir(self.dir())? {
+            let entry = res?;
+            let meta = entry.metadata()?;
+            if meta.is_dir() {
+                dirs.push(String::from(entry.file_name().to_str().unwrap()));
+            }
+        }
+
+        Ok(dirs)
     }
 }
 
