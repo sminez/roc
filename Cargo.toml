@@ -1,5 +1,5 @@
 [package]
-name = "roc"
+name = "rocdoc"
 version = "0.1.1"
 authors = [
     "sminez <innes.andersonmorrison@gmail.com>",
@@ -14,9 +14,14 @@ description = """
 Command line rust documentation searching in the style of godoc
 """
 
+[[bin]]
+doc = false
+name = "roc"
+path = "src/main.rs"
+
 [dependencies]
 clap = "3.0.0-beta.1"
-select = "0.4.3"
+select = "0.5.0"
 
 [dev-dependencies]
 test-case = "1.0"

@@ -1,6 +1,6 @@
 use clap::Clap;
-use roc::locate;
-use roc::parse;
+use rocdoc::locate;
+use rocdoc::parse;
 use std::process;
 
 /// roc -- command lines rust documentation that rocks
