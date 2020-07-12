@@ -1,6 +1,6 @@
 [package]
 name = "rocdoc"
-version = "0.1.1"
+version = "0.1.2"
 authors = [
     "sminez <innes.andersonmorrison@gmail.com>",
     "mchlrhw <4028654+mchlrhw@users.noreply.github.com>"
@@ -21,6 +21,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = "3.0.0-beta.1"
+colored = "1.9.3"
 select = "0.5.0"
 
 [dev-dependencies]

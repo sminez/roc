@@ -1,16 +1,15 @@
 /*!
  * Parse the contents of rustdoc generated HTML files
  */
-extern crate select;
-
 use crate::{locate, table};
+use colored::*;
 use select::document::Document;
 use select::node::Node;
 use select::predicate::{And, Class, Name, Not};
 use std::fs;
 
 fn header(s: &str) -> String {
-    format!("{}\n{}", s, vec!["-"; s.len()].join(""),)
+    format!("{} {}", "::".yellow(), s)
 }
 
 /**
@@ -42,7 +41,7 @@ impl DocParser {
 
     /// Instead of parsing the contents of the search result, show child modules instead
     pub fn show_child_modules(&self) {
-        let s = if let Some(ms) = self.extract_modules() {
+        let s = if let Some(ms) = self.table_with_header("modules") {
             ms
         } else {
             "No child modules found".into()
@@ -60,25 +59,25 @@ impl DocParser {
                 if let Some(s) = self.extract_summary() {
                     sections.push(s)
                 };
-                if let Some(s) = self.extract_modules() {
+                if let Some(s) = self.table_with_header("modules") {
                     sections.push(s)
                 };
-                if let Some(s) = self.extract_traits() {
+                if let Some(s) = self.table_with_header("traits") {
                     sections.push(s)
                 };
-                if let Some(s) = self.extract_constants() {
+                if let Some(s) = self.table_with_header("constants") {
                     sections.push(s)
                 };
-                if let Some(s) = self.extract_structs() {
+                if let Some(s) = self.table_with_header("structs") {
                     sections.push(s)
                 };
-                if let Some(s) = self.extract_enums() {
+                if let Some(s) = self.table_with_header("enums") {
                     sections.push(s)
                 };
-                if let Some(s) = self.extract_functions() {
+                if let Some(s) = self.table_with_header("functions") {
                     sections.push(s)
                 };
-                if let Some(s) = self.extract_macros() {
+                if let Some(s) = self.table_with_header("macros") {
                     sections.push(s)
                 };
             }
@@ -97,6 +96,15 @@ impl DocParser {
                     None => format!("{} is not method", self.method_name.clone().unwrap()),
                 };
                 sections.push(s)
+            }
+
+            locate::Tag::Enum => {
+                if let Some(s) = self.extract_summary() {
+                    sections.push(s)
+                }
+                if let Some(s) = self.extract_enum_variants() {
+                    sections.push(s)
+                };
             }
 
             _ => {
@@ -177,6 +185,24 @@ impl DocParser {
         return Some(sections.join("\n\n"));
     }
 
+    fn extract_enum_variants(&self) -> Option<String> {
+        let sections: Vec<String> = self
+            .contents
+            .find(|n: &Node| n.attr("id").map_or(false, |i| i.starts_with("variant.")))
+            .map(|n| {
+                let mut lines = vec![n.text()];
+                if let Some(n) = n.next() {
+                    if n.is(Class("docblock")) {
+                        lines.push(n.text());
+                    }
+                }
+                lines.join("\n")
+            })
+            .collect();
+
+        return Some(sections.join("\n"));
+    }
+
     fn table_after_header(&self, header: &str) -> Option<String> {
         Some(
             table::Table::from_rows(
@@ -203,33 +229,5 @@ impl DocParser {
     fn table_with_header(&self, header_str: &str) -> Option<String> {
         self.table_after_header(header_str)
             .map(|t| format!("{}\n{}", header(header_str), t))
-    }
-
-    fn extract_structs(&self) -> Option<String> {
-        self.table_with_header("structs")
-    }
-
-    fn extract_functions(&self) -> Option<String> {
-        self.table_with_header("functions")
-    }
-
-    fn extract_traits(&self) -> Option<String> {
-        self.table_with_header("traits")
-    }
-
-    fn extract_macros(&self) -> Option<String> {
-        self.table_with_header("macros")
-    }
-
-    fn extract_enums(&self) -> Option<String> {
-        self.table_with_header("enums")
-    }
-
-    fn extract_constants(&self) -> Option<String> {
-        self.table_with_header("constants")
-    }
-
-    fn extract_modules(&self) -> Option<String> {
-        self.table_with_header("modules")
     }
 }
