@@ -1,16 +1,12 @@
 /*!
  * Parse the contents of rustdoc generated HTML files
  */
-use crate::{locate, table};
-use colored::*;
+use crate::pprint::{header, ENUM_HEADING_COLOR, SECTION_HEADING_COLOR};
+use crate::{locate, pprint};
 use select::document::Document;
 use select::node::Node;
 use select::predicate::{And, Class, Name, Not};
 use std::fs;
-
-fn header(s: &str) -> String {
-    format!("{} {}", "::".yellow(), s)
-}
 
 /**
  * Parses generated HTML output from rustdoc to give summarised results.
@@ -190,7 +186,7 @@ impl DocParser {
             .contents
             .find(|n: &Node| n.attr("id").map_or(false, |i| i.starts_with("variant.")))
             .map(|n| {
-                let mut lines = vec![n.text()];
+                let mut lines = vec![header(&n.text(), ENUM_HEADING_COLOR)];
                 if let Some(n) = n.next() {
                     if n.is(Class("docblock")) {
                         lines.push(n.text());
@@ -205,7 +201,7 @@ impl DocParser {
 
     fn table_after_header(&self, header: &str) -> Option<String> {
         Some(
-            table::Table::from_rows(
+            pprint::Table::from_rows(
                 self.contents
                     .find(And(Class("section-header"), |n: &Node| {
                         n.attr("id").map_or(false, |i| i == header)
@@ -228,6 +224,6 @@ impl DocParser {
 
     fn table_with_header(&self, header_str: &str) -> Option<String> {
         self.table_after_header(header_str)
-            .map(|t| format!("{}\n{}", header(header_str), t))
+            .map(|t| format!("{}\n{}", header(header_str, SECTION_HEADING_COLOR), t))
     }
 }

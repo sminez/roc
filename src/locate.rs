@@ -1,8 +1,29 @@
 /*!
  * Locate the generated docs that we have available within the current workspace
  */
+use crate::pprint::{header, pprint_as_columns, CRATE_LIST_HEADING_COLOR};
 use std::fs;
 use std::{env, ffi, path, process};
+
+/// Determine the known crates under this path
+pub fn list_known_crates() -> std::io::Result<()> {
+    let mut dirs = vec![String::from("std")];
+
+    if let Some(root) = get_doc_root(&CrateType::Cargo) {
+        for res in root.read_dir()? {
+            let entry = res?;
+            let meta = entry.metadata()?;
+            if meta.is_dir() && entry.file_name() != "src" {
+                dirs.push(String::from(entry.file_name().to_str().unwrap()));
+            }
+        }
+    }
+
+    dirs.sort();
+    let title = header("known crates", CRATE_LIST_HEADING_COLOR);
+    println!("{}\n{}", title, pprint_as_columns(dirs));
+    Ok(())
+}
 
 /// Each of the various documentation types we can be asked to locate
 #[derive(PartialEq, Eq, Debug, Clone)]

@@ -3,29 +3,35 @@ use rocdoc::locate;
 use rocdoc::parse;
 use std::process;
 
-/// roc -- command lines rust documentation that rocks
+const CRATE_ROOT_QUERIES: &[&'static str] = &[".", "crate"];
+
+/**
+ * roc :: command lines rust documentation that rocks
+ */
 #[derive(Clap, Debug)]
 struct Options {
     /// list out child modules under the given path
     #[clap(short = "l", long = "list")]
     list: bool,
 
-    // /// show any example code that is provided in the full docs
-    // #[clap(short = "e", long = "show-examples")]
-    // show_examples: bool,
     /// open the selected doc page in the browser using full rustdoc
     #[clap(short = "o", long = "open")]
     open_in_browser: bool,
 
-    // /// grep through the documentation for partial matches (ignores case)
-    // #[clap(short = "s", long = "string")]
-    // grep: Option<String>,
-    /// <mod>[::<symbol>[.<method>]]
+    /// <crate/mod>[::<symbol>[.<method>]]
     query: String,
 }
 
 fn main() {
     let opts: Options = Options::parse();
+
+    if CRATE_ROOT_QUERIES.contains(&opts.query.as_ref()) {
+        if let Err(e) = locate::list_known_crates() {
+            eprintln!("{}", e);
+        }
+        return;
+    }
+
     let locator = locate::Locator::new(opts.query);
     let tagged_path = match locator.determine_tagged_path() {
         Some(p) => p,
