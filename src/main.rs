@@ -18,6 +18,10 @@ struct Options {
     #[clap(short = "o", long = "open")]
     open_in_browser: bool,
 
+    /// grep the resulting output to only show lines matching this query
+    #[clap(short = "g", long = "grep")]
+    grep: Option<String>,
+
     /// <crate/mod>[::<symbol>[.<method>]]
     query: String,
 }
@@ -46,7 +50,7 @@ fn main() {
     } else if opts.list {
         parse::DocParser::new(tagged_path).show_child_modules();
     } else {
-        parse::DocParser::new(tagged_path).parse_and_print();
+        parse::DocParser::new(tagged_path).parse_and_print(opts.grep);
     }
 }
 

@@ -1,12 +1,20 @@
 /*!
  * Parse the contents of rustdoc generated HTML files
  */
-use crate::pprint::{header, ENUM_HEADING_COLOR, SECTION_HEADING_COLOR};
-use crate::{locate, pprint};
-use select::document::Document;
-use select::node::Node;
-use select::predicate::{And, Class, Name, Not};
-use std::fs;
+use crate::{
+    locate, pprint,
+    pprint::{header, ENUM_HEADING_COLOR, SECTION_HEADING_COLOR},
+};
+use grep::{
+    regex::RegexMatcher,
+    searcher::{sinks::UTF8, Searcher},
+};
+use select::{
+    document::Document,
+    node::Node,
+    predicate::{And, Class, Name, Not},
+};
+use std::{error::Error, fs};
 
 /**
  * Parses generated HTML output from rustdoc to give summarised results.
@@ -37,7 +45,7 @@ impl DocParser {
 
     /// Instead of parsing the contents of the search result, show child modules instead
     pub fn show_child_modules(&self) {
-        let s = if let Some(ms) = self.table_with_header("modules") {
+        let s = if let Some(ms) = self.table_with_header("modules", &None) {
             ms
         } else {
             "No child modules found".into()
@@ -47,7 +55,7 @@ impl DocParser {
     }
 
     /// Parse the contents of a located doc file and pretty print them to the terminal
-    pub fn parse_and_print(&self) {
+    pub fn parse_and_print(&self, grep: Option<String>) {
         let mut sections: Vec<String> = vec![];
 
         match self.tag {
@@ -55,25 +63,25 @@ impl DocParser {
                 if let Some(s) = self.extract_summary() {
                     sections.push(s)
                 };
-                if let Some(s) = self.table_with_header("modules") {
+                if let Some(s) = self.table_with_header("modules", &grep) {
                     sections.push(s)
                 };
-                if let Some(s) = self.table_with_header("traits") {
+                if let Some(s) = self.table_with_header("traits", &grep) {
                     sections.push(s)
                 };
-                if let Some(s) = self.table_with_header("constants") {
+                if let Some(s) = self.table_with_header("constants", &grep) {
                     sections.push(s)
                 };
-                if let Some(s) = self.table_with_header("structs") {
+                if let Some(s) = self.table_with_header("structs", &grep) {
                     sections.push(s)
                 };
-                if let Some(s) = self.table_with_header("enums") {
+                if let Some(s) = self.table_with_header("enums", &grep) {
                     sections.push(s)
                 };
-                if let Some(s) = self.table_with_header("functions") {
+                if let Some(s) = self.table_with_header("functions", &grep) {
                     sections.push(s)
                 };
-                if let Some(s) = self.table_with_header("macros") {
+                if let Some(s) = self.table_with_header("macros", &grep) {
                     sections.push(s)
                 };
             }
@@ -83,7 +91,7 @@ impl DocParser {
                 if let Some(s) = self.extract_summary() {
                     sections.push(s)
                 }
-                sections.push(self.extract_method_signatures());
+                sections.push(self.extract_method_signatures(&grep));
             }
 
             locate::Tag::Method => {
@@ -98,7 +106,7 @@ impl DocParser {
                 if let Some(s) = self.extract_summary() {
                     sections.push(s)
                 }
-                if let Some(s) = self.extract_enum_variants() {
+                if let Some(s) = self.extract_enum_variants(&grep) {
                     sections.push(s)
                 };
             }
@@ -145,7 +153,7 @@ impl DocParser {
             .join("\n")
     }
 
-    fn extract_method_signatures(&self) -> String {
+    fn extract_method_signatures(&self, grep: &Option<String>) -> String {
         let impl_block = self.contents.find(Class("impl-items")).next().unwrap();
         let mut methods: Vec<String> = vec![];
 
@@ -157,7 +165,11 @@ impl DocParser {
             }
         }
 
-        return methods.join("\n");
+        let raw = methods.join("\n");
+        match grep {
+            Some(grep_str) => matching_lines(raw, grep_str).unwrap(),
+            None => raw,
+        }
     }
 
     fn extract_method(&self) -> Option<String> {
@@ -181,8 +193,8 @@ impl DocParser {
         return Some(sections.join("\n\n"));
     }
 
-    fn extract_enum_variants(&self) -> Option<String> {
-        let sections: Vec<String> = self
+    fn extract_enum_variants(&self, grep: &Option<String>) -> Option<String> {
+        let raw = self
             .contents
             .find(|n: &Node| n.attr("id").map_or(false, |i| i.starts_with("variant.")))
             .map(|n| {
@@ -194,9 +206,13 @@ impl DocParser {
                 }
                 lines.join("\n")
             })
-            .collect();
+            .collect::<Vec<String>>()
+            .join("\n");
 
-        return Some(sections.join("\n"));
+        match grep {
+            Some(grep_str) => matching_lines(raw, grep_str).ok(),
+            None => Some(raw),
+        }
     }
 
     fn table_after_header(&self, header: &str) -> Option<String> {
@@ -222,8 +238,33 @@ impl DocParser {
         )
     }
 
-    fn table_with_header(&self, header_str: &str) -> Option<String> {
-        self.table_after_header(header_str)
-            .map(|t| format!("{}\n{}", header(header_str, SECTION_HEADING_COLOR), t))
+    fn table_with_header(&self, header_str: &str, grep: &Option<String>) -> Option<String> {
+        self.table_after_header(header_str).map(|t| {
+            let s = match grep {
+                Some(grep_str) => match matching_lines(t, grep_str) {
+                    Ok(lines) => lines,
+                    Err(e) => panic!("{}", e),
+                },
+                None => t,
+            };
+            format!("{}\n{}", header(header_str, SECTION_HEADING_COLOR), s)
+        })
     }
+}
+
+fn matching_lines(s: String, pattern: &str) -> Result<String, Box<dyn Error>> {
+    let matcher = RegexMatcher::new(pattern)?;
+    let mut matches: Vec<String> = vec![];
+    let lines: Vec<&str> = s.split('\n').collect();
+
+    Searcher::new().search_slice(
+        &matcher,
+        s.as_bytes(),
+        UTF8(|lnum, _| {
+            matches.push(lines[lnum as usize].to_string());
+            Ok(true)
+        }),
+    )?;
+
+    Ok(matches.join("\n"))
 }

@@ -24,6 +24,7 @@ clap = "3.0.0-beta.1"
 colored = "1.9.3"
 select = "0.5.0"
 term_size = "0.3.2"
+grep = "0.2"
 
 [dev-dependencies]
 test-case = "1.0"
