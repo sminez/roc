@@ -11,15 +11,15 @@ const CRATE_ROOT_QUERIES: &[&'static str] = &[".", "crate"];
 #[derive(Clap, Debug)]
 struct Options {
     /// list out child modules under the given path
-    #[clap(short = "l", long = "list")]
+    #[clap(short = 'l', long = "list")]
     list: bool,
 
     /// open the selected doc page in the browser using full rustdoc
-    #[clap(short = "o", long = "open")]
+    #[clap(short = 'o', long = "open")]
     open_in_browser: bool,
 
     /// grep the resulting output to only show lines matching this query
-    #[clap(short = "g", long = "grep")]
+    #[clap(short = 'g', long = "grep")]
     grep: Option<String>,
 
     /// <crate/mod>[::<symbol>[.<method>]]
